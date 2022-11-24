@@ -1,0 +1,186 @@
+---
+title: "Final Project"
+output: pdf_document
+author: "Sofia Spasibenko"
+date: "2022-10-18"
+---
+
+#Introduction
+The purpose of this project is to investigate the best model for predicting the rating of an Airbnb.
+
+##What is (an) Airbnb?
+Airbnb is a vacation rental company that allows users to book privately owned residences to stay at overnight. The type of residence can vary from booking to booking: some are homes, others are rooms, some are apartments, and others offer unique experiences such as tents or RVs. These residences are often collectively referred to as 'Airbnbs'.
+
+The website itself is easy to browse. Users can input the locations they are looking for, sort bookings by price, or even specify the type of experience they would like. Once a user picks a specific Airbnb they are interested in, they are able to look at more specific information about the Airbnb including its rating, reviews, amenities, amount of rooms, type of rooms, and of course the dates it's available to book.
+
+##Why might this model be useful?
+Like most other products, those that have better ratings, are often times of more interest to consumers! If an owner is looking to upload a new Airbnb, can they do certain things to help their property receive great ratings from the start and have their property boosted to attract more visitors? We will see if we can determine the things each host can do in order to ensure the highest rating the property can get.
+
+##Loading Data and Packages
+
+```{r setup, include=FALSE}
+library(tidymodels)
+library(tidyverse)
+library(ggplot2)
+library(corrplot)
+library(forcats)
+library(corrr)
+library(yardstick)
+library(ISLR)
+library(ISLR2)
+library(sf)
+library(mapview)
+library(dplyr)
+library(stringr)
+```
+
+First, we will load in our data:
+```{r}
+listings <- read.csv('/Users/Sofia/Desktop/PSTAT131/Final Project/Airbnb Data/Listings.csv')
+```
+
+We have a grand total of 279,712 observations and 33 variables! This is a lot of data to wrangle, but we will do our best to clean out as much of it as we can.
+
+Next, we will remove some of the more inconsistent variables like the name of the Airbnb, host location, neighborhood, and district.
+
+```{r}
+complete_listings <- listings %>% 
+  select(-name, -host_location, -neighbourhood, -district)
+```
+
+This brings us down to 29 variables! However, now we must work with the data itself. Unfortunately, many of the observations have incomplete entries with multiple missing entries. We will start by removing any incomplete cases from the dataset:
+
+```{r}
+complete_listings <- complete_listings[complete.cases(complete_listings), ]
+```
+
+This narrows down our dataset to 93,324 observations which is about a third of the data we had started with. This is still plenty of data to work with!
+
+Next, we will be looking at the data itself. One of our variables contains a list of amenities: this section likely contains valuable information, but we can not work with the data as it is right now. Instead, we will make the most common amenities into dummy variables for each airbnb.
+
+We start off by creating a separate dataframe with just listings and amenities:
+
+```{r}
+amenities_list <- complete_listings %>% select(c("listing_id", "amenities"))
+```
+
+We then apply a function that cleans our text data and unlists each value in the list of amenities. We get a resulting dataframe with two columns for listing IDs and each corresponding amenity as a separate entity. There's over two million amenities in our 93,324 airbnbs!
+
+```{r}
+amenitiesFunction <- function(n){
+  output <- n %>% 
+    str_to_lower() %>%                      # make all amenities lowercase
+    str_split(",") %>%                      # split each list at a comma
+    unlist() %>%                            # unlist the amenities
+    str_replace_all("[[:punct:]]", "") %>%  # get rid of any punctuation
+    str_trim() %>%                          # trim white spaces in amenities
+    tibble()                                # display as tibble
+return(output)
+}
+
+amenities_list$amenities_new <- map(.x = amenities_list$amenities, 
+                                       .f = amenitiesFunction) 
+unnest(amenities_list, cols = amenities_new)
+
+save(amenities_list, file = 'bigFiles/amenities_list')
+```
+
+Since there is a lot of variation among the amenities, our next step is to filter any infrequent ones and categorize them as "other." We will also perform the same action on property type in our main dataframe:
+
+```{r}
+in_freq
+```
+
+
+We will now create dummy variables for all the variables that are either TRUE or FALSE and transform them into factors.
+
+```{r}
+factorFunction <- function(n) {
+  n <- factor(n, levels = c("t", "f"))
+return(n)}
+
+complete_listings[c(7,9,10,29)] <- lapply(complete_listings[c(7,9,10,29)], factorFunction)
+```
+
+We will now split the data into a training and testing set:
+
+```{r}
+set.seed(128)
+
+abnb_split <- initial_split(complete_listings, prop = 0.70,
+                                strata = review_scores_rating)
+abnb_tr <- training(abnb_split)
+abnb_te <- testing(abnb_split)
+abnb_split
+```
+
+Lets look at the distribution of our listings around the world:
+```{r, eval=FALSE}
+tr_map <- mapview(abnb_tr, xcol = "longitude", ycol = "latitude", crs = 4269, grid = FALSE)
+save(tr_map, file = 'bigFiles/tr_map')
+```
+```{r}
+load(file='bigFiles/tr_map')
+```
+
+It's clear that we only have listings for a couple of cities, the cities being: Bangkok, Cape Town, Hong Kong, Istanbul, Mexico City, New York, Paris, Rio de Janeiro, Rome, and Sydney.
+
+```{r}
+ggplot(abnb_tr, aes(review_scores_rating)) +
+  geom_histogram(fill = "maroon", binwidth = 2) +
+  facet_wrap(~city, scales = "free_y") +
+  labs(
+    title = "Histogram of Reviews by City"
+  )
+```
+
+
+```{r}
+ggplot(abnb_tr, aes(review_scores_rating)) +
+  geom_histogram(bins = 60, fill = "maroon") +
+  labs(
+    title = "Histogram of Ratings"
+  )
+```
+
+We see an upward trend in ratings, but we have to keep in mind that we do not know how many total reviews they have received!
+
+```{r}
+table(complete_listings$property_type) %>% 
+  as.data.frame %>% 
+  arrange(desc(Freq)) %>% 
+  select(Freq >= 1000)
+
+unique(complete_listings$property_type)
+
+ggplot(abnb_tr, aes(review_scores_rating)) +
+  geom_histogram(fill = "maroon") +
+  facet_wrap(~host_response_time, scales = "free_y") +
+  labs(
+    title = "Histogram of Reviews by Property Type"
+  )
+
+plot(abnb_tr$review_scores_rating, abnb_tr$host_acceptance_rate, col="maroon")
+
+ggplot(abnb_tr, aes(reorder(host_response_time, price), price)) +
+  geom_boxplot() + 
+  coord_flip() +
+  xlim(20, 15)
+```
+
+
+Now lets take a look at how much each non-character variable correlates with the others:
+
+```{r}
+numeric_col <-
+  abnb_te %>%
+  select_if(is.numeric) %>%
+  colnames()
+
+numabnb <- select(abnb_te, all_of(numeric_col)) %>%
+  cor(use = "complete.obs")
+
+corrplot(numabnb, is.corr = FALSE, type = "lower")
+```
+
+
