@@ -32,6 +32,7 @@ library(sf)
 library(mapview)
 library(dplyr)
 library(stringr)
+library(janitor)
 ```
 
 First, we will load in our data:
@@ -41,14 +42,18 @@ listings <- read.csv('/Users/Sofia/Desktop/PSTAT131/Final Project/Airbnb Data/Li
 
 We have a grand total of 279,712 observations and 33 variables! This is a lot of data to wrangle, but we will do our best to clean out as much of it as we can.
 
-Next, we will remove some of the more inconsistent variables like the name of the Airbnb, host location, neighborhood, and district.
+##Preprocessing
+
+Next, we will transform our data so that it is easier to work with when we began analyzing it! 
+
+We'll start off by removing some of the more inconsistent variables like the name of the Airbnb, host location, neighborhood, and district.
 
 ```{r}
 complete_listings <- listings %>% 
   select(-name, -host_location, -neighbourhood, -district)
 ```
 
-This brings us down to 29 variables! However, now we must work with the data itself. Unfortunately, many of the observations have incomplete entries with multiple missing entries. We will start by removing any incomplete cases from the dataset:
+This brings us down to 29 variables! Now as we take a look at our observations, we can see that many of the observations have incomplete entries with multiple missing entries. We will remove any incomplete cases from the dataset:
 
 ```{r}
 complete_listings <- complete_listings[complete.cases(complete_listings), ]
@@ -56,7 +61,8 @@ complete_listings <- complete_listings[complete.cases(complete_listings), ]
 
 This narrows down our dataset to 93,324 observations which is about a third of the data we had started with. This is still plenty of data to work with!
 
-Next, we will be looking at the data itself. One of our variables contains a list of amenities: this section likely contains valuable information, but we can not work with the data as it is right now. Instead, we will make the most common amenities into dummy variables for each airbnb.
+###Cleaning Out Amenities List
+One of our variables contains a list of amenities: this is likely very valuable information, but we can not work with the data as it is right now. Instead, we will make the most common amenities into dummy variables for each Airbnb.
 
 We start off by creating a separate dataframe with just listings and amenities:
 
@@ -66,7 +72,7 @@ amenities_list <- complete_listings %>% select(c("listing_id", "amenities"))
 
 We then apply a function that cleans our text data and unlists each value in the list of amenities. We get a resulting dataframe with two columns for listing IDs and each corresponding amenity as a separate entity. There's over two million amenities in our 93,324 airbnbs!
 
-```{r}
+```{r, eval = FALSE}
 amenitiesFunction <- function(n){
   output <- n %>% 
     str_to_lower() %>%                      # make all amenities lowercase
@@ -79,27 +85,74 @@ return(output)
 }
 
 amenities_list$amenities_new <- map(.x = amenities_list$amenities, 
-                                       .f = amenitiesFunction) 
-unnest(amenities_list, cols = amenities_new)
+                                       .f = amenitiesFunction)
+
+amenities_list <- unnest(amenities_list, cols = amenities_new)
+
+amenities_list <- amenities_list %>% select(!amenities)
+colnames(amenities_list)[2] = 'new_amenities'
 
 save(amenities_list, file = 'bigFiles/amenities_list')
 ```
 
-Since there is a lot of variation among the amenities, our next step is to filter any infrequent ones and categorize them as "other." We will also perform the same action on property type in our main dataframe:
+Since there is a lot of variation among the amenities, our next step is to filter any infrequent ones, categorize them as "Other", and format it to fit the rest of our listing data:
 
 ```{r}
-in_freq
+load(file = 'bigFiles/amenities_list')
+
+amenities_list2 <- amenities_list %>%
+  mutate(new_amenities = fct_lump(new_amenities, prop = .01)) %>%
+  mutate(row = row_number()) %>% 
+  pivot_wider(names_from = new_amenities, values_from = row)
 ```
 
+Unfortunately, because there are multiple counts of "Other" in some of the entries, pivot_wider returns lists of values. To bypass this, I created a new data frame that contained the lengths of each list which told us which listings have or do not have certain amenities:
 
-We will now create dummy variables for all the variables that are either TRUE or FALSE and transform them into factors.
+```{r, eval = FALSE}
+amenities_list3 <- tibble(.rows = 93324)
+amenities_list3$listing_id <- amenities_list2$listing_id
+
+for (n in amenities_list2[2:38]) {
+  n1 <- ifelse(lengths(n) == 0, 'f', 't')
+  amenities_list3[ , ncol(amenities_list3) + 1] <- n1
+}
+
+colnames(amenities_list3) <- colnames(amenities_list2)
+
+write_rds(amenities_list3, file = 'bigFiles/amenities_list_final')
+```
+
+PHEW! That was a doozy. Now, let's append these amenities to our original data frame:
+
+```{r}
+amenities_final <- read_rds(file = 'bigFiles/amenities_list_final')
+
+complete_listings <- complete_listings %>% 
+  cbind(amenities_final[2:38]) %>% 
+  select(-amenities)
+```
+
+That's really nice to look at! However, we still have some things to take care of. We will also categorize rarer property types as "Other" in our main dataframe:
+
+```{r}
+complete_listings <- complete_listings %>%
+  mutate(property_type = fct_lump(property_type, prop = .01))
+```
+
+And then we will create dummy variables for all the variables that are either TRUE or FALSE and transform them into factors (including our amenities).
 
 ```{r}
 factorFunction <- function(n) {
   n <- factor(n, levels = c("t", "f"))
 return(n)}
 
-complete_listings[c(7,9,10,29)] <- lapply(complete_listings[c(7,9,10,29)], factorFunction)
+complete_listings[c(7,9,10,28:65)] <- lapply(complete_listings[c(7,9,10,28:65)], factorFunction)
+```
+
+We're almost done with the pre-processing of our data! Finally, we're going to clean our variable names to make them easier to work with:
+
+```{r}
+complete_listings <- complete_listings %>% clean_names()
 ```
 
 We will now split the data into a training and testing set:
