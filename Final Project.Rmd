@@ -1,19 +1,22 @@
 ---
 title: "Final Project"
-output: pdf_document
+output: html_document
 author: "Sofia Spasibenko"
 date: "2022-10-18"
 ---
 
 #Introduction
+
 The purpose of this project is to investigate the best model for predicting the rating of an Airbnb.
 
 ##What is (an) Airbnb?
+
 Airbnb is a vacation rental company that allows users to book privately owned residences to stay at overnight. The type of residence can vary from booking to booking: some are homes, others are rooms, some are apartments, and others offer unique experiences such as tents or RVs. These residences are often collectively referred to as 'Airbnbs'.
 
 The website itself is easy to browse. Users can input the locations they are looking for, sort bookings by price, or even specify the type of experience they would like. Once a user picks a specific Airbnb they are interested in, they are able to look at more specific information about the Airbnb including its rating, reviews, amenities, amount of rooms, type of rooms, and of course the dates it's available to book.
 
 ##Why might this model be useful?
+
 Like most other products, those that have better ratings, are often times of more interest to consumers! If an owner is looking to upload a new Airbnb, can they do certain things to help their property receive great ratings from the start and have their property boosted to attract more visitors? We will see if we can determine the things each host can do in order to ensure the highest rating the property can get.
 
 ##Loading Data and Packages
@@ -22,29 +25,32 @@ Like most other products, those that have better ratings, are often times of mor
 library(tidymodels)
 library(tidyverse)
 library(ggplot2)
+library(maps)
 library(corrplot)
 library(forcats)
 library(corrr)
 library(yardstick)
-library(ISLR)
-library(ISLR2)
 library(sf)
 library(mapview)
 library(dplyr)
 library(stringr)
 library(janitor)
+library(lubridate)
+library(MASS)
+tidymodels_prefer()
 ```
 
 First, we will load in our data:
+
 ```{r}
 listings <- read.csv('/Users/Sofia/Desktop/PSTAT131/Final Project/Airbnb Data/Listings.csv')
 ```
 
 We have a grand total of 279,712 observations and 33 variables! This is a lot of data to wrangle, but we will do our best to clean out as much of it as we can.
 
-##Preprocessing
+#Preprocessing
 
-Next, we will transform our data so that it is easier to work with when we began analyzing it! 
+Next, we will transform our data so that it is easier to work with when we began analyzing it!
 
 We'll start off by removing some of the more inconsistent variables like the name of the Airbnb, host location, neighborhood, and district.
 
@@ -61,7 +67,8 @@ complete_listings <- complete_listings[complete.cases(complete_listings), ]
 
 This narrows down our dataset to 93,324 observations which is about a third of the data we had started with. This is still plenty of data to work with!
 
-###Cleaning Out Amenities List
+##Cleaning Out Amenities List
+
 One of our variables contains a list of amenities: this is likely very valuable information, but we can not work with the data as it is right now. Instead, we will make the most common amenities into dummy variables for each Airbnb.
 
 We start off by creating a separate dataframe with just listings and amenities:
@@ -130,22 +137,45 @@ amenities_final <- read_rds(file = 'bigFiles/amenities_list_final')
 complete_listings <- complete_listings %>% 
   cbind(amenities_final[2:38]) %>% 
   select(-amenities)
+
+head(complete_listings)
 ```
 
-That's really nice to look at! However, we still have some things to take care of. We will also categorize rarer property types as "Other" in our main dataframe:
+That's really nice to look at! However, we still have some things to take care of...
+
+##Factors and Cleaning Names
+
+We will also categorize rarer property types as "Other" in our main dataframe:
 
 ```{r}
 complete_listings <- complete_listings %>%
   mutate(property_type = fct_lump(property_type, prop = .01))
 ```
 
-And then we will create dummy variables for all the variables that are either TRUE or FALSE and transform them into factors (including our amenities).
+Then, we will create a column that contains the date when the user became a host in lubridate format and one that only contains the year when the user became a host for simplicity purposes:
 
 ```{r}
+complete_listings <- complete_listings %>%
+  mutate(date = parse_date(host_since, "%Y-%m-%d"),
+    host_since_year = year(date))
+```
+
+We will make the year into a factor sas well:
+
+```{r}
+complete_listings$host_since_year <- complete_listings$host_since_year %>%
+  as.factor()
+```
+
+And then we will transform all the variables that are either TRUE or FALSE into factors (including our amenities).
+
+```{r, include=FALSE}
 factorFunction <- function(n) {
   n <- factor(n, levels = c("t", "f"))
 return(n)}
+```
 
+```{r}
 complete_listings[c(7,9,10,28:65)] <- lapply(complete_listings[c(7,9,10,28:65)], factorFunction)
 ```
 
@@ -155,28 +185,52 @@ We're almost done with the pre-processing of our data! Finally, we're going to c
 complete_listings <- complete_listings %>% clean_names()
 ```
 
-We will now split the data into a training and testing set:
+... and now we can begin work on our models!
+
+#Model Set-Up
+
+To set up our models, we will be splitting our data, exploring it, creating a recipe, and splitting it once again into cross-validation folds.
+
+##Splitting Data
+
+To determine how successful our models are, we will be splitting our data: we will use some of it to train our models and we will use the remaining parts to test it. We set our seed (for replicability), make our split ratio 80/20, and split on ratings so we have similar distributions in both training and testing:
 
 ```{r}
 set.seed(128)
 
-abnb_split <- initial_split(complete_listings, prop = 0.70,
+abnb_split <- initial_split(complete_listings, prop = 0.80,
                                 strata = review_scores_rating)
 abnb_tr <- training(abnb_split)
 abnb_te <- testing(abnb_split)
 abnb_split
 ```
 
-Lets look at the distribution of our listings around the world:
-```{r, eval=FALSE}
-tr_map <- mapview(abnb_tr, xcol = "longitude", ycol = "latitude", crs = 4269, grid = FALSE)
+In our training set, we will be working with 74,658 a Airbnbs!
+
+##Exploration of Data
+
+Now we finally get to take a look at the shape of our data!
+
+Lets start by taking a look at the locations of our listings around the world:
+
+```{r, eval=FALSE, include=FALSE}
+tr_map <- mapview(abnb_tr, xcol = "longitude", ycol = "latitude", 
+                  crs = 4326, grid = FALSE)
+
 save(tr_map, file = 'bigFiles/tr_map')
 ```
+
 ```{r}
-load(file='bigFiles/tr_map')
+options(mapviewMaxPixels = 10000)
+mapviewOptions(maxpoints = 2000, maxpolygons = 2000, maxlines = 2000)
+
+tr_map <- load(file='bigFiles/tr_map')
+tr_map
 ```
 
-It's clear that we only have listings for a couple of cities, the cities being: Bangkok, Cape Town, Hong Kong, Istanbul, Mexico City, New York, Paris, Rio de Janeiro, Rome, and Sydney.
+It's clear that we only have listings from a couple of cities. The cities we have are: Bangkok, Cape Town, Hong Kong, Istanbul, Mexico City, New York, Paris, Rio de Janeiro, Rome, and Sydney.
+
+Lets see how these cities vary among each other in their rating distributions:
 
 ```{r}
 ggplot(abnb_tr, aes(review_scores_rating)) +
@@ -187,53 +241,311 @@ ggplot(abnb_tr, aes(review_scores_rating)) +
   )
 ```
 
+The distributions look pretty similar in each city! Most of the cities except for Rome show a large spike in perfect scores.
+
+Here we can look at the overall distribution of ratings among all Airbnbs in our data:
 
 ```{r}
 ggplot(abnb_tr, aes(review_scores_rating)) +
   geom_histogram(bins = 60, fill = "maroon") +
   labs(
-    title = "Histogram of Ratings"
+    title = "Histogram of Reviews"
   )
 ```
 
-We see an upward trend in ratings, but we have to keep in mind that we do not know how many total reviews they have received!
+We see an upward trend in ratings, but we have to keep in mind that we do not know how many total reviews they have received! Overall, people tend to be pretty satisfied with their stays, though we do see small spikes in data which indicate some variation.
 
-```{r}
-table(complete_listings$property_type) %>% 
-  as.data.frame %>% 
-  arrange(desc(Freq)) %>% 
-  select(Freq >= 1000)
+Now, let's look at the distribution of ratings by property type since that may play a large part into what customers are satisfied with:
 
-unique(complete_listings$property_type)
-
+```{r, warning=FALSE}
 ggplot(abnb_tr, aes(review_scores_rating)) +
   geom_histogram(fill = "maroon") +
-  facet_wrap(~host_response_time, scales = "free_y") +
+  facet_wrap(~property_type, scales = "free_y") +
   labs(
     title = "Histogram of Reviews by Property Type"
   )
-
-plot(abnb_tr$review_scores_rating, abnb_tr$host_acceptance_rate, col="maroon")
-
-ggplot(abnb_tr, aes(reorder(host_response_time, price), price)) +
-  geom_boxplot() + 
-  coord_flip() +
-  xlim(20, 15)
 ```
 
+Most of our graphs seem to be showing similar patterns to each other, though there are subtle differences between them. For example, Airbnbs that are classified as rooms in hotels have a bit of a spike around the 80 and the 90 point review marks. Airbnbs such as entire guest suites seem to have a fairly consistent exponential spike in reviews. This makes sense since the two property types are at different price points, so customers are--on average--paying for a better experience.
 
-Now lets take a look at how much each non-character variable correlates with the others:
+Speaking of pricing, we can take a look at the correlations between price and review scores for each type of property:
+
+```{r, warning=FALSE}
+ggplot(abnb_tr, aes(review_scores_rating, price)) +
+  geom_point(alpha = 0.1, colour = 'maroon') +
+  geom_smooth(se = FALSE, color = "black", size = 1) +
+  facet_wrap(~property_type, scales = "free_y") +
+  labs(
+    title = "Reviews versus Price by Property Type"
+  )
+```
+
+As can be expected, the pricing and the review scores do tend to show a slight positive correlation, though a majority of the bookings stay on the less expensive end. A private room in bed and breakfast and entire guest suites show some unique graphs, but they are also amongst the ones with the least amount of reviews.
+
+Out of curiosity, I am also going to take a look at the distribution of reviews for a random amenity. I'm personally curious about whether having hot water would or would not affect the rating of an Airbnb:
+
+```{r}
+ggplot(abnb_tr, aes(review_scores_rating)) +
+  geom_bar(aes(fill = hot_water)) +
+  scale_fill_manual(values = c("maroon", "skyblue"))
+```
+
+Seems like people don't mind not having hot water! Or at least they don't expect to have it if it's not included within the amenities. Nevertheless, it's fun to look at!
+
+Finally, let's take a general look at how much each non-character variable correlates with the others:
 
 ```{r}
 numeric_col <-
-  abnb_te %>%
+  abnb_tr %>%
   select_if(is.numeric) %>%
   colnames()
 
 numabnb <- select(abnb_te, all_of(numeric_col)) %>%
-  cor(use = "complete.obs")
+  cor()
 
 corrplot(numabnb, is.corr = FALSE, type = "lower")
 ```
+
+We do not see a huge correlation between most of these points aside from the total review rating and the subsequent breakdowns. These correlations make sense given that the total review scores rating is based on the makeup of the other scores! We can also see that the amount of bedrooms correlates to the amount of people the Airbnb can accommodate which also makes sense. Price seems to have a slight positive correlation with both of those variables as well. Finally, we see a correlation between latitude and longitude (this also makes sense since we are only looking at a select few cities) as well as a correlation between host id and booking id. Though I'm not sure about the inner workings of the Airbnb system, it would make sense to assume that the booking id is generated using the host id.
+
+Now that we know a little bit more about what we're working with, let's finish up setting up our models!
+
+##Creating a Recipe
+
+In order to build our models, we will create a singular recipe that will tell each model how to use the data we are giving it and what we are trying to predict: in this case it is the total review rating. Here, I am choosing to exclude a few of the variables from our data set. I will be excluding:
+
+-   latitude and longitude since in between values won't mean much to us
+-   listing_id and host_id since they are random
+-   host_since and date since we will be using host_since_year
+-   any other variables starting with review since they will directly correlate to the total rating
+
+Then I will be creating dummy variables for all the nominal variables as well as normalizing all the predictors:
+
+```{r}
+abnb_recipe <- recipe(review_scores_rating ~ host_response_time +
+                        host_response_rate + host_acceptance_rate + 
+                        host_is_superhost + host_total_listings_count + 
+                        host_has_profile_pic + host_identity_verified + city +
+                        property_type + room_type + accommodates + bedrooms +
+                        price + minimum_nights + maximum_nights + 
+                        instant_bookable + shampoo + dishes_and_silverware + 
+                        heating + iron + kitchen + hair_dryer + essentials +
+                        washer + bed_linens + refrigerator + hot_water + oven +
+                        wifi + cooking_basics + long_term_stays_allowed +
+                        dedicated_workspace + elevator + hangers + coffee_maker +
+                        carbon_monoxide_alarm + smoke_alarm + other + microwave + 
+                        air_conditioning + free_street_parking + dryer + 
+                        fire_extinguisher + extra_pillows_and_blankets + tv +
+                        cable_tv + first_aid_kit + private_entrance + 
+                        luggage_dropoff_allowed + free_parking_on_premises + 
+                        stove + host_greets_you + patio_or_balcony + 
+                        host_since_year, data = abnb_tr) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_normalize(all_predictors()) %>% 
+  prep()
+
+bake(abnb_recipe, new_data = NULL)
+```
+
+We have quite the recipe here with 92 variables! Hopefully my computer will be able to process all this data that we are about to analyze.
+
+##Cross-Validation
+
+In our last step before we finally build our models, we will be splitting our training data into folds to ensure that we get the most out of the data that we have. I will only be creating three folds because of the size of the data set to reduce the run time for our models:
+
+```{r}
+set.seed(128)
+abnb_folds <- vfold_cv(abnb_tr, v = 3, strata = review_scores_rating)
+```
+
+Then, we save the training data, folds, and recipe in order to employ them while building the actual models:
+
+```{r}
+save(abnb_tr, abnb_folds, abnb_recipe, file = "model_basics/model_setup.rda")
+```
+
+#Model Building
+
+We will be constructing four models to see which one will predict review scores ratings the best. The models we will use are:
+
+- Linear Regression
+- Regularized Regression
+- Boosted Trees
+- Random Forest
+
+##Linear Regression
+
+To start we will clarify that we will be conducting a linear regression analysis and set our engine to 'lm':
+
+```{r}
+lm_model <- linear_reg() %>% 
+  set_mode("regression") %>%
+  set_engine("lm")
+```
+
+Then we will set up our workflow:
+
+```{r}
+lm_wflow <- workflow() %>%    #empty workflow
+  add_model(lm_model) %>%     #add model
+  add_recipe(abnb_recipe)     #add recipe
+```
+
+Now we will fit our model to our training data and save our results:
+
+```{r}
+lm_fit <- fit_resamples(lm_wflow, abnb_folds)
+
+write_rds(lm_fit, file = 'results/lm_results')
+```
+
+Onto the next model!
+
+##Regularized Regression
+
+Now we will be tuning some of our regression parameters using an elastic net that will hopefully give us more accurate results than the linear regression model! We begin by setting up the model and the engine like we did for the linear regression model:
+
+```{r}
+elastic_net_spec <- multinom_reg(penalty = tune(),
+                                 mixture = tune()) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+```
+
+Then we create our workflow:
+
+```{r}
+en_workflow <- workflow() %>% 
+  add_recipe(abnb_recipe) %>%
+  add_model(elastic_net_spec)
+```
+
+And our grid:
+
+```{r}
+en_grid <- grid_regular(penalty(range = c(-5,5)),
+                        mixture(range = c(0,1)), 
+                        levels = 10)
+```
+
+And we finish off by tuning the model itself:
+
+```{r}
+tune_reg_reg <- tune_grid(
+  en_workflow,
+  resamples = abnb_folds, 
+  grid = en_grid)
+
+write_rds(tune_reg_reg, file = 'results/regreg_results')
+```
+
+
+##Boosted Trees
+
+With this being our third model, we're starting to get into the groove of things. To make our boosted trees we will be setting up the model:
+
+```{r}
+boosted_tree_spec <- boost_tree() %>% 
+  set_engine("xgboost") %>% 
+  set_mode("regression") %>% 
+  set_args(trees = tune())
+```
+
+Setting up the workflow:
+
+```{r}
+boosted_tree_wf <- workflow() %>% 
+  add_model(boosted_tree_spec) %>% 
+  add_recipe(abnb_recipe)
+```
+
+Making the tuning grid:
+
+```{r}
+param_grid_boosted_tree <- grid_regular(trees(range = c(10,2000)), levels = 10)
+```
+
+And then tuning that same grid and saving it:
+
+```{r}
+tune_boosted_tree <- tune_grid(
+  boosted_tree_wf,
+  resamples = abnb_folds,
+  grid = param_grid_boosted_tree,
+  metrics = metric_set(rmse, rsq)
+)
+
+write_rds(tune_boosted_tree, file = 'results/bt_results')
+```
+
+##Random Forest
+
+Our final model is our most complex and long winded: the random forest. We will follow the same steps to set it up, and We will start by setting up the engine and the model:
+
+```{r}
+forest_spec <- rand_forest() %>% 
+  set_engine("ranger", importance = 'impurity') %>% 
+  set_mode("regression") %>% 
+  set_args(mtry = tune(),
+           trees = tune(),
+           min_n = tune())
+```
+
+Then the workflow:
+
+```{r}
+forest_wf <- workflow() %>% 
+  add_model(forest_spec) %>% 
+  add_recipe(abnb_recipe)
+```
+
+Then the grid:
+
+```{r}
+param_grid_forest <- grid_regular(mtry(range = c(1,8)), min_n(range = c(5,20)),
+                           trees(range = c(100, 900)), levels = 8)
+```
+
+And after all that we finish off by tuning the model:
+
+```{r}
+tune_forest <- tune_grid(
+  forest_wf,
+  resamples = abnb_folds,
+  grid = param_grid_forest,
+  metrics = metric_set(roc_auc)
+)
+
+write_rds(tune_forest, file = 'results/rf_results')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+collect_metrics(lm_fit)
+
+augment(lm_fit, new_data = abnb_tr) %>%
+  rmse(truth = review_scores_rating, estimate = .pred)
+```
+
+
+
 
 
