@@ -1,0 +1,42 @@
+---
+title: "lm_model"
+output: html_document
+date: "2022-11-30"
+---
+
+```{r setup, include=FALSE}
+library(tidymodels)
+library(tidyverse)
+library(ggplot2)
+tidymodels_prefer()
+
+load(file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
+```
+
+##Linear Regression
+
+To start we will clarify that we will be conducting a linear regression analysis and set our engine to 'lm':
+
+```{r}
+lm_model <- linear_reg() %>% 
+  set_mode("regression") %>%
+  set_engine("lm")
+```
+
+Then we will set up our workflow:
+
+```{r}
+lm_wflow <- workflow() %>%    #empty workflow
+  add_model(lm_model) %>%     #add model
+  add_recipe(abnb_recipe)     #add recipe
+```
+
+Now we will fit our model to our training data and save our results:
+
+```{r}
+lm_fit <- fit_resamples(lm_wflow, abnb_folds)
+
+write_rds(lm_fit, file =
+            '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/lm_results')
+```
+

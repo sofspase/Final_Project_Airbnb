@@ -1,0 +1,57 @@
+---
+title: "bt_model"
+output: html_document
+date: "2022-12-01"
+---
+
+```{r setup, include=FALSE}
+library(tidymodels)
+library(tidyverse)
+library(ggplot2)
+library(vip)
+library(xgboost)
+tidymodels_prefer()
+
+load(file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
+```
+
+##Boosted Trees
+
+With this being our third model, we're starting to get into the groove of things. To make our boosted trees we will be setting up the model:
+
+```{r}
+boosted_tree_spec <- boost_tree() %>% 
+  set_engine("xgboost") %>% 
+  set_mode("regression") %>% 
+  set_args(trees = tune(),
+           learn_rate = tune())
+```
+
+Setting up the workflow:
+
+```{r}
+boosted_tree_wf <- workflow() %>% 
+  add_model(boosted_tree_spec) %>% 
+  add_recipe(abnb_recipe)
+```
+
+Making the tuning grid:
+
+```{r}
+param_grid_boosted_tree <- grid_regular(trees(range = c(10,300)), levels = 10,
+                                        learn_rate(range = c(-10, -1)))
+```
+
+And then tuning that same grid and saving it:
+
+```{r}
+tune_boosted_tree <- tune_grid(
+  boosted_tree_wf,
+  resamples = abnb_folds,
+  grid = param_grid_boosted_tree,
+  metrics = metric_set(rmse, rsq)
+)
+
+write_rds(tune_boosted_tree, file =
+            '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/bt_results')
+```

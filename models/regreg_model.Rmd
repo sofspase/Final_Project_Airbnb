@@ -1,0 +1,53 @@
+---
+title: "regreg_model"
+output: html_document
+date: "2022-11-30"
+---
+
+```{r setup, include=FALSE}
+library(tidymodels)
+library(tidyverse)
+library(ggplot2)
+library(glmnet)
+tidymodels_prefer()
+
+load(file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
+```
+
+##Regularized Regression
+
+Now we will be tuning some of our regression parameters using an elastic net that will hopefully give us more accurate results than the linear regression model! We begin by setting up the model and the engine like we did for the linear regression model:
+
+```{r}
+elastic_net_spec <- linear_reg(penalty = tune(),
+                                 mixture = tune()) %>% 
+  set_engine("glmnet")
+```
+
+Then we create our workflow:
+
+```{r}
+en_workflow <- workflow() %>% 
+  add_recipe(abnb_recipe) %>%
+  add_model(elastic_net_spec)
+```
+
+And our grid:
+
+```{r}
+en_grid <- grid_regular(penalty(range = c(-5,5)),
+                        mixture(range = c(0,1)), 
+                        levels = 10)
+```
+
+And we finish off by tuning the model itself:
+
+```{r}
+tune_reg_reg <- tune_grid(
+  en_workflow,
+  resamples = abnb_folds, 
+  grid = en_grid)
+
+write_rds(tune_reg_reg, file =
+            '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/regreg_results')
+```

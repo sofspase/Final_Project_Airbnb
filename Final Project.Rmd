@@ -232,7 +232,7 @@ It's clear that we only have listings from a couple of cities. The cities we hav
 
 Lets see how these cities vary among each other in their rating distributions:
 
-```{r}
+```{r, echo=FALSE}
 ggplot(abnb_tr, aes(review_scores_rating)) +
   geom_histogram(fill = "maroon", binwidth = 2) +
   facet_wrap(~city, scales = "free_y") +
@@ -245,7 +245,7 @@ The distributions look pretty similar in each city! Most of the cities except fo
 
 Here we can look at the overall distribution of ratings among all Airbnbs in our data:
 
-```{r}
+```{r, echo=FALSE}
 ggplot(abnb_tr, aes(review_scores_rating)) +
   geom_histogram(bins = 60, fill = "maroon") +
   labs(
@@ -257,7 +257,7 @@ We see an upward trend in ratings, but we have to keep in mind that we do not kn
 
 Now, let's look at the distribution of ratings by property type since that may play a large part into what customers are satisfied with:
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, echo=FALSE}
 ggplot(abnb_tr, aes(review_scores_rating)) +
   geom_histogram(fill = "maroon") +
   facet_wrap(~property_type, scales = "free_y") +
@@ -270,7 +270,7 @@ Most of our graphs seem to be showing similar patterns to each other, though the
 
 Speaking of pricing, we can take a look at the correlations between price and review scores for each type of property:
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, echo=FALSE}
 ggplot(abnb_tr, aes(review_scores_rating, price)) +
   geom_point(alpha = 0.1, colour = 'maroon') +
   geom_smooth(se = FALSE, color = "black", size = 1) +
@@ -284,7 +284,7 @@ As can be expected, the pricing and the review scores do tend to show a slight p
 
 Out of curiosity, I am also going to take a look at the distribution of reviews for a random amenity. I'm personally curious about whether having hot water would or would not affect the rating of an Airbnb:
 
-```{r}
+```{r, echo=FALSE}
 ggplot(abnb_tr, aes(review_scores_rating)) +
   geom_bar(aes(fill = hot_water)) +
   scale_fill_manual(values = c("maroon", "skyblue"))
@@ -294,7 +294,7 @@ Seems like people don't mind not having hot water! Or at least they don't expect
 
 Finally, let's take a general look at how much each non-character variable correlates with the others:
 
-```{r}
+```{r, echo=FALSE}
 numeric_col <-
   abnb_tr %>%
   select_if(is.numeric) %>%
@@ -368,10 +368,10 @@ save(abnb_tr, abnb_folds, abnb_recipe, file = "model_basics/model_setup.rda")
 
 We will be constructing four models to see which one will predict review scores ratings the best. The models we will use are:
 
-- Linear Regression
-- Regularized Regression
-- Boosted Trees
-- Random Forest
+-   Linear Regression
+-   Regularized Regression
+-   Boosted Trees
+-   Random Forest
 
 ##Linear Regression
 
@@ -439,7 +439,6 @@ tune_reg_reg <- tune_grid(
 write_rds(tune_reg_reg, file = 'results/regreg_results')
 ```
 
-
 ##Boosted Trees
 
 With this being our third model, we're starting to get into the groove of things. To make our boosted trees we will be setting up the model:
@@ -448,7 +447,8 @@ With this being our third model, we're starting to get into the groove of things
 boosted_tree_spec <- boost_tree() %>% 
   set_engine("xgboost") %>% 
   set_mode("regression") %>% 
-  set_args(trees = tune())
+  set_args(trees = tune(),
+           learn_rate = tune())
 ```
 
 Setting up the workflow:
@@ -462,7 +462,7 @@ boosted_tree_wf <- workflow() %>%
 Making the tuning grid:
 
 ```{r}
-param_grid_boosted_tree <- grid_regular(trees(range = c(10,2000)), levels = 10)
+param_grid_boosted_tree <- grid_regular(trees(range = c(10,300)), levels = 10, learn_rate(range = c(-10, -1)))
 ```
 
 And then tuning that same grid and saving it:
@@ -502,8 +502,8 @@ forest_wf <- workflow() %>%
 Then the grid:
 
 ```{r}
-param_grid_forest <- grid_regular(mtry(range = c(1,8)), min_n(range = c(5,20)),
-                           trees(range = c(100, 900)), levels = 8)
+param_grid_forest <- grid_regular(mtry(range = c(1,10)), min_n(range = c(5,20)),
+                           trees(range = c(100, 500)), levels = 8)
 ```
 
 And after all that we finish off by tuning the model:
@@ -523,29 +523,23 @@ write_rds(tune_forest, file = 'results/rf_results')
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ```{r}
 collect_metrics(lm_fit)
 
 augment(lm_fit, new_data = abnb_tr) %>%
   rmse(truth = review_scores_rating, estimate = .pred)
+
+
+
+best <- select_best(tune_reg_reg, metric = "rsq")
+autoplot(tune_reg_reg)
+
+
+tune_boosted_tree %>% 
+  collect_metrics() %>% 
+  arrange(desc(mean)) %>% 
+  slice(1)
+
+
+
 ```
-
-
-
-
-
