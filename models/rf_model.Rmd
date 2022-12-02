@@ -9,9 +9,14 @@ library(tidymodels)
 library(tidyverse)
 library(ggplot2)
 library(vip)
+library(ranger)
 tidymodels_prefer()
 
-load(file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
+
+
+load(file = '/Users/sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
+
+#       '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
 ```
 
 ##Random Forest
@@ -45,8 +50,6 @@ param_grid_forest <- grid_regular(mtry(range = c(1,10)), min_n(range = c(5,20)),
 And after all that we finish off by tuning the model:
 
 ```{r}
-start.time <- Sys.time()
-
 tune_forest <- tune_grid(
   forest_wf,
   resamples = abnb_folds,
@@ -54,10 +57,6 @@ tune_forest <- tune_grid(
   metrics = metric_set(rmse, rsq)
 )
 
-end.time <- Sys.time()
-time.taken <- round(end.time - start.time,2)
-time.taken
-
-write_rds(tune_forest, file =
-            '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_results')
+write_rds(tune_forest, file = '/Users/sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_results')
+            #'/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_results')
 ```
