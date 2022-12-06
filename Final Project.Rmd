@@ -1,25 +1,29 @@
 ---
-title: "Final Project"
-output: html_document
+title: "Airbnb Final Project"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
 author: "Sofia Spasibenko"
 date: "2022-10-18"
 ---
 
-#Introduction
+# Introduction
 
 The purpose of this project is to investigate the best model for predicting the rating of an Airbnb.
 
-##What is (an) Airbnb?
+## What is (an) Airbnb?
 
 Airbnb is a vacation rental company that allows users to book privately owned residences to stay at overnight. The type of residence can vary from booking to booking: some are homes, others are rooms, some are apartments, and others offer unique experiences such as tents or RVs. These residences are often collectively referred to as 'Airbnbs'.
 
 The website itself is easy to browse. Users can input the locations they are looking for, sort bookings by price, or even specify the type of experience they would like. Once a user picks a specific Airbnb they are interested in, they are able to look at more specific information about the Airbnb including its rating, reviews, amenities, amount of rooms, type of rooms, and of course the dates it's available to book.
 
-##Why might this model be useful?
+## Why might this model be useful?
 
-Like most other products, those that have better ratings, are often times of more interest to consumers! If an owner is looking to upload a new Airbnb, can they do certain things to help their property receive great ratings from the start and have their property boosted to attract more visitors? We will see if we can determine the things each host can do in order to ensure the highest rating the property can get.
+Like most other products, those that have better ratings, are often times of more interest to consumers! If a host is looking to upload a new Airbnb, can they do certain things to help their property receive great ratings from the start and have their property boosted to attract more visitors? We will see if we can determine what characteristics of an Airbnb result in a better stay.
 
-##Loading Data and Packages
+## Loading Data and Packages
 
 ```{r setup, include=FALSE}
 library(tidymodels)
@@ -37,6 +41,7 @@ library(stringr)
 library(janitor)
 library(lubridate)
 library(MASS)
+library(knitr)
 tidymodels_prefer()
 ```
 
@@ -48,7 +53,7 @@ listings <- read.csv('/Users/Sofia/Desktop/PSTAT131/Final Project/Airbnb Data/Li
 
 We have a grand total of 279,712 observations and 33 variables! This is a lot of data to wrangle, but we will do our best to clean out as much of it as we can.
 
-#Preprocessing
+# Preprocessing
 
 Next, we will transform our data so that it is easier to work with when we began analyzing it!
 
@@ -67,7 +72,7 @@ complete_listings <- complete_listings[complete.cases(complete_listings), ]
 
 This narrows down our dataset to 93,324 observations which is about a third of the data we had started with. This is still plenty of data to work with!
 
-##Cleaning Out Amenities List
+## Cleaning Out Amenities List
 
 One of our variables contains a list of amenities: this is likely very valuable information, but we can not work with the data as it is right now. Instead, we will make the most common amenities into dummy variables for each Airbnb.
 
@@ -143,7 +148,7 @@ head(complete_listings)
 
 That's really nice to look at! However, we still have some things to take care of...
 
-##Factors and Cleaning Names
+## Factors and Cleaning Names
 
 We will also categorize rarer property types as "Other" in our main dataframe:
 
@@ -187,11 +192,11 @@ complete_listings <- complete_listings %>% clean_names()
 
 ... and now we can begin work on our models!
 
-#Model Set-Up
+# Model Set-Up
 
 To set up our models, we will be splitting our data, exploring it, creating a recipe, and splitting it once again into cross-validation folds.
 
-##Splitting Data
+## Splitting Data
 
 To determine how successful our models are, we will be splitting our data: we will use some of it to train our models and we will use the remaining parts to test it. We set our seed (for replicability), make our split ratio 80/20, and split on ratings so we have similar distributions in both training and testing:
 
@@ -207,7 +212,7 @@ abnb_split
 
 In our training set, we will be working with 74,658 a Airbnbs!
 
-##Exploration of Data
+## Exploration of Data
 
 Now we finally get to take a look at the shape of our data!
 
@@ -224,7 +229,7 @@ save(tr_map, file = 'bigFiles/tr_map')
 options(mapviewMaxPixels = 10000)
 mapviewOptions(maxpoints = 2000, maxpolygons = 2000, maxlines = 2000)
 
-tr_map <- load(file='bigFiles/tr_map')
+load(file='bigFiles/tr_map')
 tr_map
 ```
 
@@ -280,7 +285,7 @@ ggplot(abnb_tr, aes(review_scores_rating, price)) +
   )
 ```
 
-As can be expected, the pricing and the review scores do tend to show a slight positive correlation, though a majority of the bookings stay on the less expensive end. A private room in bed and breakfast and entire guest suites show some unique graphs, but they are also amongst the ones with the least amount of reviews.
+As can be expected, the pricing and the review scores do tend to show a slight positive correlation, though a majority of the bookings stay on the less expensive end. A private room in bed and breakfast and entire guest suites show some unique graphs, but they are also among the ones with the least amount of reviews.
 
 Out of curiosity, I am also going to take a look at the distribution of reviews for a random amenity. I'm personally curious about whether having hot water would or would not affect the rating of an Airbnb:
 
@@ -310,7 +315,7 @@ We do not see a huge correlation between most of these points aside from the tot
 
 Now that we know a little bit more about what we're working with, let's finish up setting up our models!
 
-##Creating a Recipe
+## Creating a Recipe
 
 In order to build our models, we will create a singular recipe that will tell each model how to use the data we are giving it and what we are trying to predict: in this case it is the total review rating. Here, I am choosing to exclude a few of the variables from our data set. I will be excluding:
 
@@ -349,35 +354,35 @@ bake(abnb_recipe, new_data = NULL)
 
 We have quite the recipe here with 92 variables! Hopefully my computer will be able to process all this data that we are about to analyze.
 
-##Cross-Validation
+## Cross-Validation
 
-In our last step before we finally build our models, we will be splitting our training data into folds to ensure that we get the most out of the data that we have. I will only be creating three folds because of the size of the data set to reduce the run time for our models:
+In our last step before we finally build our models, we will be splitting our training data into folds. This step will provide us with mini training and testing sets that we can use to train our models and see which one performs best. This step increases our likelihood of getting better results in our actual testing set. I will only be creating three folds because of the size of the data set to reduce the run time for our models:
 
 ```{r}
 set.seed(128)
 abnb_folds <- vfold_cv(abnb_tr, v = 3, strata = review_scores_rating)
 ```
 
-Then, we save the training data, folds, and recipe in order to employ them while building the actual models:
+Then, I'm going to save the training data, folds, and recipe in order to employ them later while building the actual models:
 
-```{r}
+```{r, eval = FALSE}
 save(abnb_tr, abnb_folds, abnb_recipe, file = "model_basics/model_setup.rda")
 ```
 
-#Model Building
+# Model Building
 
-We will be constructing four models to see which one will predict review scores ratings the best. The models we will use are:
+We will be constructing four models to see which one will help us predict review score ratings the best. The models we will use are:
 
 -   Linear Regression
 -   Regularized Regression
 -   Boosted Trees
 -   Random Forest
 
-##Linear Regression
+## Linear Regression
 
 To start we will clarify that we will be conducting a linear regression analysis and set our engine to 'lm':
 
-```{r}
+```{r, eval = FALSE}
 lm_model <- linear_reg() %>% 
   set_mode("regression") %>%
   set_engine("lm")
@@ -385,7 +390,7 @@ lm_model <- linear_reg() %>%
 
 Then we will set up our workflow:
 
-```{r}
+```{r, eval = FALSE}
 lm_wflow <- workflow() %>%    #empty workflow
   add_model(lm_model) %>%     #add model
   add_recipe(abnb_recipe)     #add recipe
@@ -393,19 +398,19 @@ lm_wflow <- workflow() %>%    #empty workflow
 
 Now we will fit our model to our training data and save our results:
 
-```{r}
+```{r, eval = FALSE}
 lm_fit <- fit_resamples(lm_wflow, abnb_folds)
 
 write_rds(lm_fit, file = 'results/lm_results')
 ```
 
-Onto the next model!
+And that's it for linear regression! Onto the next model.
 
-##Regularized Regression
+## Regularized Regression
 
 Now we will be tuning some of our regression parameters using an elastic net that will hopefully give us more accurate results than the linear regression model! We begin by setting up the model and the engine like we did for the linear regression model:
 
-```{r}
+```{r, eval = FALSE}
 elastic_net_spec <- multinom_reg(penalty = tune(),
                                  mixture = tune()) %>% 
   set_mode("regression") %>% 
@@ -414,7 +419,7 @@ elastic_net_spec <- multinom_reg(penalty = tune(),
 
 Then we create our workflow:
 
-```{r}
+```{r, eval = FALSE}
 en_workflow <- workflow() %>% 
   add_recipe(abnb_recipe) %>%
   add_model(elastic_net_spec)
@@ -422,7 +427,7 @@ en_workflow <- workflow() %>%
 
 And our grid:
 
-```{r}
+```{r, eval = FALSE}
 en_grid <- grid_regular(penalty(range = c(-5,5)),
                         mixture(range = c(0,1)), 
                         levels = 10)
@@ -430,7 +435,7 @@ en_grid <- grid_regular(penalty(range = c(-5,5)),
 
 And we finish off by tuning the model itself:
 
-```{r}
+```{r, eval = FALSE}
 tune_reg_reg <- tune_grid(
   en_workflow,
   resamples = abnb_folds, 
@@ -439,11 +444,11 @@ tune_reg_reg <- tune_grid(
 write_rds(tune_reg_reg, file = 'results/regreg_results')
 ```
 
-##Boosted Trees
+## Boosted Trees
 
 With this being our third model, we're starting to get into the groove of things. To make our boosted trees we will be setting up the model:
 
-```{r}
+```{r, eval = FALSE}
 boosted_tree_spec <- boost_tree() %>% 
   set_engine("xgboost") %>% 
   set_mode("regression") %>% 
@@ -453,21 +458,21 @@ boosted_tree_spec <- boost_tree() %>%
 
 Setting up the workflow:
 
-```{r}
+```{r, eval = FALSE}
 boosted_tree_wf <- workflow() %>% 
   add_model(boosted_tree_spec) %>% 
   add_recipe(abnb_recipe)
 ```
 
-Making the tuning grid:
+Making the tuning grid with ten levels of trees and learning rate:
 
-```{r}
+```{r, eval = FALSE}
 param_grid_boosted_tree <- grid_regular(trees(range = c(10,300)), levels = 10, learn_rate(range = c(-10, -1)))
 ```
 
 And then tuning that same grid and saving it:
 
-```{r}
+```{r, eval = FALSE}
 tune_boosted_tree <- tune_grid(
   boosted_tree_wf,
   resamples = abnb_folds,
@@ -478,7 +483,7 @@ tune_boosted_tree <- tune_grid(
 write_rds(tune_boosted_tree, file = 'results/bt_results')
 ```
 
-##Random Forest
+## Random Forest
 
 Our final model is our most complex and long winded: the random forest. We will follow the same steps to set it up, and We will start by setting up the engine and the model:
 
@@ -499,16 +504,16 @@ forest_wf <- workflow() %>%
   add_recipe(abnb_recipe)
 ```
 
-Then the grid:
+Next up is our grid. However, we have to be careful making this grid since the parameters could greatly affect our run time. We will use a tree range between 100-500, and eight levels for the predictors and required nodes for a split:
 
-```{r}
+```{r, eval = FALSE}
 param_grid_forest <- grid_regular(mtry(range = c(1,10)), min_n(range = c(5,20)),
                            trees(range = c(100, 500)), levels = 8)
 ```
 
 And after all that we finish off by tuning the model:
 
-```{r}
+```{r, eval = FALSE}
 tune_forest <- tune_grid(
   forest_wf,
   resamples = abnb_folds,
@@ -519,27 +524,216 @@ tune_forest <- tune_grid(
 write_rds(tune_forest, file = 'results/rf_results')
 ```
 
+# Model Results
 
-
-
+Now that we have ran our models, it is time to analyze our results. We're going to start by loading in our data:
 
 ```{r}
-collect_metrics(lm_fit)
+lm_results <- read_rds('results/lm_results')
+regreg_results <- read_rds('results/regreg_results')
+bt_results <- read_rds('results/bt_results')
+rf_results <- read_rds('results/rf_results')
+```
 
-augment(lm_fit, new_data = abnb_tr) %>%
-  rmse(truth = review_scores_rating, estimate = .pred)
+Since we are analyzing a continuous regression problem, we will be taking a look at two measurements. The first is the root-mean square deviation (rmse) which indicates the average difference between the true and the predicted value. The second is the root square error (rsq) that indicates the percentage of our outcome variable that can be explained by the predictors. Our goal is to minimize the rmse and to maximize the rsq. Let's see how well our models did!
 
+## Linear Regression Results
 
+Our simplest model was the linear regression model. Let's take a look at the rmse and rsq:
 
-best <- select_best(tune_reg_reg, metric = "rsq")
-autoplot(tune_reg_reg)
+```{r}
+lm <- collect_metrics(lm_results)
+lm
+```
 
+...Not the best! We have an average difference of 8.89 points between listings and their predicted review scores rating, and we could only explain about 10.5% of our outcome. However, this is not unusual to see in linear regression, and it insinuates that our data is probably not linearly correlated.
 
-tune_boosted_tree %>% 
+## Regularized Regression Results
+
+Knowing our results for the linear regression model, we know we might see pretty similar in our elastic net models! Let's take a look at our autoplots:
+
+```{r, echo=FALSE}
+autoplot(regreg_results)
+```
+
+The models did about the same as our linear regression model! The elastic net model did better with lower values of both regularization and lasso penalty with rmse and rsq. Let's look at which specific values gave us the best rsq and rmse:
+
+```{r, echo=FALSE}
+regreg <- regreg_results %>% 
   collect_metrics() %>% 
-  arrange(desc(mean)) %>% 
+  subset(.metric == "rmse") %>% 
+  arrange(mean) %>% 
   slice(1)
 
+regreg <- rbind(regreg, regreg_results %>% 
+  collect_metrics() %>% 
+  subset(.metric == "rsq") %>% 
+  arrange(desc(mean)) %>% 
+  slice(1))
 
-
+regreg
 ```
+
+Pretty similar to the linear regression! Hopefully we will be able to see some improvements in the boosted tree models.
+
+## Boosted Trees Results
+
+Here the models saw a substantial jump in run time. It took a little under an hour to fit all the boosted tree models to the data. Let's hope to see some improvement, and take a look at the autoplot:
+
+```{r, echo=FALSE}
+autoplot(bt_results)
+```
+
+Our models did have a slight improvement! Here we can see that lower learning rates seemed to have better output both in rmse and rsq. Though they are not the best of results, it is good to see improvement! Let's take a look at which specific boosted tree models gave us the best rmse and rsq:
+
+```{r, echo=FALSE}
+bt <- bt_results %>% 
+  collect_metrics() %>% 
+  subset(.metric == "rmse") %>% 
+  arrange(mean) %>% 
+  slice(1)
+
+bt <- rbind(bt, bt_results %>% 
+  collect_metrics() %>% 
+  subset(.metric == "rsq") %>% 
+  arrange(desc(mean)) %>% 
+  slice(1))
+
+bt
+```
+
+Here we can see that the same exact model gave us the best rmse and rsq. It had 106 trees and a learning rate of 0.1! We see a decrease in rmse by about 0.21 points and an increase in rsq by 4%! Let's see if our random forest can do better.
+
+## Random Forest Results
+
+The random forest model had by far the longest run time. It had crashed my laptop after almost 24 hours of tuning, and took about nine and a half to run on a different laptop. After all that, let's take a look at an autoplot of the results:
+
+```{r, echo=FALSE}
+autoplot(rf_results)
+```
+
+Though they look pretty similar, we can see that models with more trees did better than the ones with less trees, and that more random predictors and more minimal node sizes also gave us better values. Like before, let's look at the specific values of the best models:
+
+```{r, echo=FALSE}
+rf <- rf_results %>% 
+  collect_metrics() %>%
+  subset(.metric == "rmse") %>% 
+  arrange(mean) %>% 
+  slice(1)
+
+rf <- rbind(rf, rf_results %>% 
+  collect_metrics() %>% 
+  subset(.metric == "rsq") %>% 
+  arrange(desc(mean)) %>% 
+  slice(1))
+
+rf
+```
+
+We saw a slight increase in our model this time as well! Our rmse went down by 0.08 and our rsq went up by 1.6%. Though still pretty low, it is nice to see our rmse and rsq improve!
+
+We can also take a look at the variable importance plot for our rmse to see which variables were split on most often:
+
+```{r, echo=FALSE}
+rf_vip <- read_rds('results/rf_vip')
+rf_vip
+```
+
+The price of the Airbnb, whether the host was a superhost, and the total amount of listings a host has, seem to be the most decisive variables! It makes sense that the price of the Airbnb and a higher amount of experience of the host would ensure a better stay for the occupants.
+
+Now, having run all of our models, we will choose the best one and fit it to our testing set!
+
+## Choosing a Model
+
+Let's compare our models side by side to choose which one we will fit to our testing set. First let's look at rsme:
+
+```{r, echo=FALSE}
+rmses <- c(lm %>% subset(.metric == "rmse") %>% select(mean), 
+           regreg %>% subset(.metric == "rmse") %>% select(mean), 
+           bt %>% subset(.metric == "rmse") %>% select(mean), 
+           rf %>% subset(.metric == "rmse") %>% select(mean))
+
+models <- c("Linear Regression", 
+            "Regularized Regression", 
+            "Boosted Tree", 
+            "Random Forest")
+
+results <- tibble(models = models, rmse = rmses)
+
+results %>% 
+  unnest(cols = rmse) %>% 
+  arrange(rmse)
+```
+
+Here we can see that the Random Forest model performed the best with the lowest rmse! Let's see if it is any different for the rsq:
+
+```{r, echo=FALSE}
+rsqs <- c(lm %>% subset(.metric == "rsq") %>% select(mean), 
+           regreg %>% subset(.metric == "rsq") %>% select(mean), 
+           bt %>% subset(.metric == "rsq") %>% select(mean), 
+           rf %>% subset(.metric == "rsq") %>% select(mean))
+
+models <- c("Linear Regression", 
+            "Regularized Regression", 
+            "Boosted Tree", 
+            "Random Forest")
+
+results <- tibble(models = models, rsq = rsqs)
+
+results %>% 
+  unnest(cols = rsq) %>% 
+  arrange(desc(rsq))
+```
+
+We can see here that the Random Forest had the best results yet again!
+
+After taking a quick peek, our forest with the highest rmse had a larger jump in value compared to other rmses. It also retained a high rsq, making it our best contender! With 10 randomly selected predictors, a minimal node size of 17, and 500 trees, we will be fitting this random forest to our testing data!
+
+## Fitting to the Testing Set
+
+Now that we've decided on a model, we will fit our random forest to the testing data. To do that, we will finalize our workflow, and finally fit the model!
+
+```{r}
+final_rf_wf <- forest_wf %>% 
+  finalize_workflow(select_best(rf_results, "rmse"))   #finalizing workflow
+
+final_fit <- fit(final_rf_wf, data = abnb_te)         #fitting to test set
+```
+
+Now that the data is fit, we can use it to predict values for our listings! Let's cross our fingers and hope for the best!
+
+```{r}
+preds <- augment(final_fit, new_data = abnb_te) %>% 
+  select(review_scores_rating, starts_with(".pred"))
+
+preds %>% head()
+```
+
+Looking at these values, we can see that there is a little bit of a difference between the actual values and our predicted ones. However, the model is able to still distinguish between which reviews should be rated higher and which ones should be rated lower!
+
+For the grand reveal let's look at our rmse and rsq:
+
+```{r}
+final_metrics <- rmse(preds, truth = review_scores_rating, estimate = .pred) %>% 
+  rbind(rsq(preds, truth = review_scores_rating, estimate = .pred))
+
+final_metrics
+```
+
+WOW! Now that is a relief to look at. Our testing set took our rmse from 8.61 to 6.19 and our rsq from 0.16 to 0.70! The difference is really surprising, but it proves that our hard work did pay off!
+
+Let's look at the listings that had the biggest differences between actual values and predictions:
+
+```{r,echo=FALSE}
+augment(final_fit, new_data = abnb_te) %>% 
+  mutate(diff = abs(review_scores_rating - .pred)) %>% 
+  filter(diff >= 20) %>% 
+  select(review_scores_rating, .pred) %>% 
+  ggplot(aes(x = review_scores_rating, y = .pred)) +
+  geom_point(alpha = 1) +
+  labs(x = "Review Scores Rating", 
+       y = "Predicted Value", 
+       title = "Reviews with Differences Over 20 Points")
+```
+
+We can tell by this graph that our model does a poor job of predicting lower rated Airbnb review score ratings. Looking more closely, we can see that many of the values fall on multiples of 20, specifically 20, 40, and 60. This is likely because the specific Airbnbs received minimal ratings, which is why our model does a poor job of predicting them. In the future, if there is a possibility of adding review count to the dataset, it may increase our metrics even further.

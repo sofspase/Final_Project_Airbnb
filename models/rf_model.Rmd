@@ -14,9 +14,7 @@ tidymodels_prefer()
 
 
 
-load(file = '/Users/sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
-
-#       '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
+load(file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/model_basics/model_setup.rda')
 ```
 
 ##Random Forest
@@ -57,6 +55,18 @@ tune_forest <- tune_grid(
   metrics = metric_set(rmse, rsq)
 )
 
-write_rds(tune_forest, file = '/Users/sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_results')
-            #'/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_results')
+write_rds(tune_forest, file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_results')
 ```
+
+```{r}
+rf_results <- read_rds('/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_results')
+
+final_forest_wf <- forest_wf %>% 
+  finalize_workflow(select_best(rf_results))
+
+forest_fit <- fit(final_forest_wf, data = abnb_tr) %>% extract_fit_parsnip()
+
+rf_vip <- vip(forest_fit)
+write_rds(rf_vip, file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_vip')
+```
+
