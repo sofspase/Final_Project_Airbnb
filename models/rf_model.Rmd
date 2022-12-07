@@ -67,6 +67,7 @@ final_forest_wf <- forest_wf %>%
 forest_fit <- fit(final_forest_wf, data = abnb_tr) %>% extract_fit_parsnip()
 
 rf_vip <- vip(forest_fit)
+save(rf_vip, file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_vip')
 write_rds(rf_vip, file = '/Users/Sofia/Documents/GitHub/Final_Project_Airbnb/results/rf_vip')
 ```
 
