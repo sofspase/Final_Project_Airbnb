@@ -22,7 +22,7 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, tidy = TRUE)
 
 ## Introduction
 
-The purpose of this project is to create a model for predicting the rating of an Airbnb based on some of its characteristics.
+The purpose of this project is to create a model for predicting the rating of an Airbnb based on the listing characteristics.
 
 <br>
 
