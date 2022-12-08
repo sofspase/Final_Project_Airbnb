@@ -28,23 +28,23 @@ The purpose of this project is to create a model for predicting the rating of an
 
 ### What is (an) Airbnb?
 
-Airbnb is a vacation rental company that allows users to book privately owned residences to stay at overnight. The type of residence can vary from booking to booking: some are homes, others are rooms, some are apartments, and others offer unique experiences such as tents or RVs. These residences are often collectively referred to as 'Airbnbs'.
+Air Bed and Breakfast (Airbnb) is a vacation rental company that allows users to book privately owned residences to stay at overnight. The type of residence can vary from booking to booking: some are homes, others are rooms, some are apartments, and others offer unique experiences such as tents or RVs. These residences are often collectively referred to as 'Airbnbs'.
 
 Take a look at the website [here](https://www.airbnb.com/).
 
-The website itself is easy to navigate. Users can input the locations they are looking for, sort bookings by price, or even specify the type of experience they would like. Once a user picks a specific Airbnb they are interested in, they are able to look at more specific information about the Airbnb including its rating, reviews, amenities, amount of rooms, type of rooms, and of course the dates it's available to book.
+The website itself is easy to navigate. Users can input the locations they are looking for, sort bookings by price, or even specify the type of experience they're interested in. Once a user picks a specific Airbnb they like, they are able to look at more specific information about the Airbnb including its rating, reviews, amenities, amount of rooms, type of rooms, and of course the dates it's available to book.
 
 <br>
 
 ### Why might this model be useful?
 
-Like most other products, those that have better ratings are often times of more interest to consumers! If a host is looking to upload a new Airbnb, can they get a glimpse into how satisfied customers will be with their stay? Our model can help them make changes to the property that might ensure a better stay for their visitors.
+Like most other commodities, those that have better ratings are often times of more interest to consumers! If a host is looking to upload a new Airbnb, can they get a glimpse into how satisfied customers will be with their stay? Our model can help them make changes to the property that might ensure a better stay for their visitors.
 
 <br>
 
 ### Loading Data and Packages
 
-First, we will load in our packages and data. The data comes from [this Kaggle dataset](https://www.kaggle.com/datasets/mysarahmadbhat/airbnb-listings-reviews) that was updated about a year ago. It contains data on over 250,000 Airbnbs from ten cities (and additionally a separate dataset containing reviews for Airbnbs).
+First, we will load in our packages and data. The data comes from [this Kaggle dataset](https://www.kaggle.com/datasets/mysarahmadbhat/airbnb-listings-reviews) that was updated about a year ago. It contains data on over 250,000 Airbnbs from ten cities (and additionally a separate dataset containing reviews for various Airbnbs).
 
 The full codebook is available to look at in the data folder, but some of the variables we will be looking at include:
 
@@ -105,7 +105,7 @@ We have a grand total of 279,712 observations and 33 variables! This is a lot of
 
 ## Preprocessing
 
-Next, we will transform our data so that it is easier to work with when we began analyzing it!
+Next, we will transform our data so that it is easier to work with when we begin analyzing it.
 
 We'll start off by removing some of the more inconsistent variables like the `name` of the Airbnb, `host_location`, `neighbourhood`, and `district`.
 
@@ -124,7 +124,7 @@ This narrows down our dataset to 93,324 observations which is about a third of t
 
 ### Cleaning Out the Amenities List
 
-One of our variables is called `amenities` and contains a list of amenities for each entry: this is likely very valuable information, but we can not work with the data as it is. Instead, we will make the most common amenities into dummy variables for each Airbnb.
+One of our variables is called `amenities` and contains a list of amenities for each entry: this is likely very valuable information, but we cannot work with the data as it is. Instead, we will make the most common amenities into dummy variables for each Airbnb.
 
 We start off by creating a separate dataframe with just `listing_id` and `amenities`:
 
@@ -206,7 +206,7 @@ complete_listings <- complete_listings %>%
 head(complete_listings) %>% as_tibble()
 ```
 
-That's really nice to look at! However, we still have some things to take care of...
+That's really nice to look at! However, we still have some other things to take care of...
 
 <br>
 
@@ -219,7 +219,7 @@ complete_listings <- complete_listings %>%
   mutate(property_type = fct_lump(property_type, prop = .01))
 ```
 
-Then, we will create a column that contains the date when the user became a Host in lubridate format and one that only contains the year when the user became a Host for simplicity purposes:
+Then, we will create a column that turns `host_since` into lubridate format and another one with only the year:
 
 ```{r}
 complete_listings <- complete_listings %>%
@@ -274,7 +274,7 @@ abnb_te <- testing(abnb_split)
 abnb_split
 ```
 
-In our training set, we will be working with 74,658 Airbnbs!
+In our training set, we will be working with 74,658 Airbnbs.
 
 <br>
 
@@ -282,7 +282,7 @@ In our training set, we will be working with 74,658 Airbnbs!
 
 Now we finally get to take a look at the shape of our data!
 
-Lets start by taking a look at the locations of our listings around the world:
+Let's start by taking a look at the locations of our listings around the world:
 
 ```{r, eval=FALSE}
 # making the map
@@ -307,7 +307,7 @@ tr_map
 
 It's clear that we only have listings from a couple of cities. The cities we have are: `Bangkok`, `Cape Town`, `Hong Kong`, `Istanbul,` `Mexico City`, `New York`, `Paris`, `Rio de Janeiro`, `Rome`, and `Sydney`.
 
-Lets see how these cities vary among each other in their rating distributions:
+Let's see how these cities vary among each other in their rating distributions:
 
 ```{r, class.source = 'fold-hide'}
 ggplot(abnb_tr, aes(review_scores_rating)) +
@@ -330,7 +330,7 @@ ggplot(abnb_tr, aes(review_scores_rating)) +
   )
 ```
 
-We see an upward trend in ratings, but we have to keep in mind that we do not know how many total reviews they have received! Overall, people tend to be pretty satisfied with their stays, though we do see small spikes in data which indicate some variation.
+We see an upward trend in ratings, but we have to keep in mind that we do not know how many total reviews they have received. Overall, people tend to be pretty satisfied with their stays, though we do see small spikes in data which indicate some variation.
 
 Now, let's look at the distribution of ratings by property type since that may play a large part into what customers are satisfied with:
 
@@ -367,7 +367,7 @@ ggplot(abnb_tr, aes(review_scores_rating)) +
   scale_fill_manual(values = c("indianred2", "skyblue"))
 ```
 
-Seems like people don't mind not having hot water! Or at least they don't expect to have it if it's not included within the amenities. Nevertheless, it's fun to look at!
+Seems like people do not mind not having hot water! Or at least they do not expect to have it if it's not included within the amenities. Nevertheless, it's fun to look at!
 
 Finally, let's take a general look at how much each non-character variable correlates with the others:
 
@@ -394,12 +394,12 @@ Now that we know a little bit more about what we're working with, let's finish u
 
 ### Creating a Recipe
 
-In order to build our models, we will create a singular recipe that will tell each model how to use the data we are giving it and what we are trying to predict: in this case it is the `total_review_rating`. Here, I am choosing to exclude a few of the variables from our data set. I will be excluding:
+In order to build our models, we will create a singular recipe that will tell each model how to use the data we are giving it what to predict. In our case, we will be predicting the `total_review_rating`. Here, I am choosing to exclude a few of the variables from our data set. I will be excluding:
 
--   `latitude` and `longitude` since in between values won't mean much to us
+-   `latitude` and `longitude` since they aren't continuous
 -   `listing_id` and `host_id` since they are random
 -   `host_since` and `date` since we will be using `host_since_year`
--   any other variables starting with review since they will directly correlate to the total rating
+-   any other variables starting with `review` since they will directly correlate to the total rating
 
 Then I will be creating dummy variables for all the nominal variables as well as normalizing all the predictors:
 
@@ -426,7 +426,7 @@ abnb_recipe <- recipe(review_scores_rating ~ host_response_time +
   step_normalize(all_predictors()) %>% 
   prep()
 
-bake(abnb_recipe, new_data = NULL)
+bake(abnb_recipe, new_data = NULL) %>% head
 ```
 
 We have quite the recipe here with 92 variables! Hopefully my computer will be able to process all this data that we are about to analyze.
@@ -435,17 +435,17 @@ We have quite the recipe here with 92 variables! Hopefully my computer will be a
 
 ### Cross-Validation
 
-In our last step before we finally build our models, we will be splitting our training data into folds. This step will provide us with mini training and testing sets that we can use to train our models and see which one performs best. This step increases our likelihood of getting better results in our actual testing set. I will only be creating three folds because of the size of the data set to reduce the run time for our models:
+In our last step before we finally build our models, we will be splitting our training data into folds. This step will provide us with mini training and testing sets that we can use to further train our models and get the best performance. This step increases our likelihood of getting better results in our actual testing set. I will only be creating three folds because of the size of our dataset to reduce the run time for our models:
 
 ```{r}
 set.seed(128)
 abnb_folds <- vfold_cv(abnb_tr, v = 3, strata = review_scores_rating)
 ```
 
-Then, I'm going to save the training data, folds, and recipe in order to employ them later while building the actual models:
+Then, I'm going to save the training data, testing data, folds, and recipe in order to employ them later while building the actual models:
 
 ```{r, eval = FALSE}
-save(abnb_tr, abnb_folds, abnb_recipe, file = "model_basics/model_setup.rda")
+save(abnb_tr, abnb_te, abnb_folds, abnb_recipe, file = "model_basics/model_setup.rda")
 ```
 
 <br>
@@ -572,7 +572,7 @@ write_rds(tune_boosted_tree, file = 'results/bt_results')
 
 ### Random Forest
 
-Our final model is our most complex and long winded: the random forest. We will follow the same steps to set it up, and We will start by setting up the engine and the model:
+Our final model is our most complex and long winded: the random forest. We will follow the same steps to set it up starting with the engine and the model:
 
 ```{r}
 forest_spec <- rand_forest() %>% 
@@ -704,10 +704,10 @@ Here we can see that the same exact model gave us the best rmse and rsq. It had 
 The random forest model had by far the longest run time. It had crashed my laptop after almost 24 hours of tuning, and took about nine and a half to run on a different laptop. After all that, let's take a look at an autoplot of the results:
 
 ```{r, class.source = 'fold-hide'}
-autoplot(rf_results)
+autoplot(rf_results) + scale_x_continuous(breaks = c(5,10))
 ```
 
-Though they look pretty similar, we can see that models with more trees did better than the ones with less trees, and that more random predictors and more minimal node sizes also gave us better values. Like before, let's look at the specific values of the best models:
+Though they look pretty similar, we can see that models with more trees did better than the ones with less trees, and that more random predictors and greater minimal node sizes also gave us better values. Like before, let's look at the specific values of the best models:
 
 ```{r, class.source = 'fold-hide'}
 rf <- rf_results %>% 
@@ -734,7 +734,7 @@ load('results/rf_vip')
 rf_vip
 ```
 
-The price of the Airbnb, whether the Host was a superhost, and the total amount of listings a Host has, seem to be the most decisive variables! It makes sense that the price of the Airbnb and a higher amount of experience of the Host would ensure a better stay for the occupants.
+The price of the Airbnb, whether the Host was a superhost, and the total amount of listings a Host has, seem to be the most decisive variables! It makes sense that the price of the Airbnb and a Host with a higher amount of experience would ensure a better stay for visitors.
 
 Now, having run all of our models, we will choose the best one and fit it to our testing set!
 
@@ -790,9 +790,25 @@ results %>%
   arrange(desc(rsq))
 ```
 
-We can see here that the Random Forest had the best results yet again!
+We can see here that the Random Forest had the best results yet again! Let's look at the performance of the top rsq and rmse forests to choose the one we will use in the end:
 
-After taking a quick peek, our forest with the highest rmse had a larger jump in value compared to other rmses. It also retained a high rsq, making it our best contender! With 10 randomly selected predictors, a minimal node size of 17, and 500 trees, we will be fitting this random forest to our testing data!
+```{r, class.source = 'fold-hide'}
+rf2 <- rf_results %>% 
+  collect_metrics() %>% # collect metrics
+  subset(.metric == "rmse") %>% # select rmse
+  arrange(mean) %>% # arrange by ascending
+  slice(1:3) # select the lowest one
+
+rf2 <- rbind(rf2, rf_results %>% # bind to rmse results
+  collect_metrics() %>% # collect metrics
+  subset(.metric == "rsq") %>% # select rsq
+  arrange(desc(mean)) %>% # arrange by descending
+  slice(1:3)) # select the highest one
+
+rf2
+```
+
+After taking a quick peek, our forest with the highest rmse had a larger jump in value compared to other rmses. It also retained a almost the same exact rsq, making it our best contender! With 10 randomly selected predictors, a minimal node size of 17, and 500 trees, we will be fitting this random forest to our testing data!
 
 <br>
 
@@ -807,7 +823,7 @@ final_rf_wf <- forest_wf %>%
 final_fit <- fit(final_rf_wf, data = abnb_te)         #fitting to test set
 ```
 
-Now that the data is fit, we can use it to predict values for our listings! Let's cross our fingers and hope for the best:
+Now that the data is fit, we can use it to predict values for our listings. Let's cross our fingers and hope for the best:
 
 ```{r, class.source = 'fold-hide'}
 # combine actual values and predictions
@@ -817,7 +833,7 @@ preds <- augment(final_fit, new_data = abnb_te) %>%
 preds %>% head()
 ```
 
-Looking at these values, we can see that there is a little bit of a difference between the actual values and our predicted ones. However, the model is able to still distinguish between which reviews should be rated higher and which ones should be rated lower!
+Looking at these values, we can see that there is a little bit of a difference between the actual values and our predicted ones. However, the model is able to still distinguish between which reviews should be rated higher and which ones should be rated lower.
 
 For the grand reveal let's look at our rmse and rsq:
 
@@ -828,7 +844,7 @@ final_metrics <- rmse(preds, truth = review_scores_rating, estimate = .pred) %>%
 final_metrics
 ```
 
-WOW! Now that is a relief to look at. Our testing set took our rmse from 8.61 to 6.19 and our rsq from 0.16 to 0.70! The difference is really surprising, but it proves that our hard work did pay off!
+WOW! Now that is a relief to look at. Our testing set took our rmse from 8.61 to 6.19 and our rsq from 0.16 to 0.70. The difference is really surprising, but it proves that our hard work paid off!
 
 Let's look at the listings that had the biggest differences between actual values and predictions:
 
@@ -844,7 +860,7 @@ augment(final_fit, new_data = abnb_te) %>%
        title = "Reviews with Differences Over 20 Points")
 ```
 
-We can tell by this graph that our model does a poor job of predicting lower rated Airbnb review score ratings. Looking more closely, we can see that many of the values fall on multiples of 20, specifically 20, 40, and 60. This is likely because the specific Airbnbs received minimal ratings, which is why our model does a poor job of predicting them. In the future, if there is a possibility of adding review count to the dataset, it may increase our metrics even further.
+We can tell by this graph that our model does a poor job of predicting lower rated Airbnb review score ratings. Looking more closely, we can see that many of the values fall on multiples of 20, specifically 20, 40, and 60. This is likely because the specific Airbnbs only received one rating, which is why our model does a poor job of predicting them. In the future, if there is a possibility of adding review count to the dataset, it may increase our metrics even further.
 
 <br>
 
@@ -862,7 +878,7 @@ Our [first Airbnb](https://www.airbnb.com/rooms/21031952?source_impression_id=p3
 augment(final_fit, new_data = abnb_te) %>% subset(listing_id == 21031952)
 ```
 
-As we can see, there had only been one review of the property which probably accounts for the poor rating! Though most of the information was the same, we can see that the Host changed the pricing of the Airbnb. Let's see what that does to our score:
+As we can see, there had only been one review of the property which probably accounts for the poor overall rating! Though most of the information was the same, we can see that the Host changed the pricing of the Airbnb. Let's see what that does to our score:
 
 ```{r, class.source = 'fold-hide'}
 abnb_test1 <- data.frame(host_response_time = 'within an hour',
@@ -914,7 +930,7 @@ Our [next Airbnb](https://www.airbnb.com/rooms/5625129/amenities?source_impressi
 augment(final_fit, new_data = abnb_te) %>% subset(listing_id == 5625129)
 ```
 
-It's current rating on the website is 4.60 stars or the equivalent of a 92 on our scale. This host had also changed the pricing of their Airbnb, as well as the minimum nights required, so we will amend the prediction to the changes:
+It's current rating on the website is 4.60 stars or the equivalent of a 92 on our scale. This host had also changed the pricing of their Airbnb, as well as the minimum nights required, so we will make some changes to get a new prediction:
 
 ```{r, class.source = 'fold-hide'}
 abnb_test2 <- data.frame(host_response_time = 'within a few hours',
@@ -966,7 +982,7 @@ Let's switch things up a little and look at a more unique property. [This](https
 augment(final_fit, new_data = abnb_te) %>% subset(listing_id == 2531491)
 ```
 
-At the time, the Airbnb was rated a 99 and our model gave it a predicted score of 95.5. The rating of the Airbnb is closer to 100 based now havinf 4.98 stars on the website. Let's see how different our predictions look after updating the price, total listings, and a few amenities:
+At the time, the Airbnb was rated a 99 and our model gave it a predicted score of 95.5. The rating of the Airbnb is now closer to 100 having 4.98 stars on the website. Let's see how different our predictions look after updating the price, total listings, and a few amenities:
 
 ```{r, class.source = 'fold-hide'}
 abnb_test3 <- data.frame(host_response_time = 'within a few hours',
@@ -1092,7 +1108,7 @@ abnb_test4_2 <- data.frame(host_response_time = 'within an hour',
 predict(final_fit, new_data = abnb_test4_2)
 ```
 
-We get 92.5 which is a difference of four points from the actual rating! This omission of information might account for lower prediction ratings compared to the actual listing reviews since their presence increases our score.
+We get 92.5 which is a difference of four points from the actual rating! This omission of information might account for lower prediction ratings in our model since their presence increases our score.
 
 <br>
 
@@ -1100,14 +1116,10 @@ We get 92.5 which is a difference of four points from the actual rating! This om
 
 Our look into predicting Airbnb ratings has certainly yielded interesting results. We looked into a few models, many of which had fairly poor results on the training set, but we were able to persevere and train a random forest that gave us an rsq of 70.5%! Of course there is lots of room for improvement, but we have a few places where we can start looking.
 
-We noticed earlier that our model was unable to predict values of Airbnbs that were rated poorly. Further exploration could be done into the reasoning behind it since resolving this issue might account for a higher rsq. One possible solution involves adding review counts to the data to see whether our models would perform differently. Some of the properties we looked at had poor sample sizes since a singular review is a poor indicator of the total review scores rating. Another change to consider could be implementing a better balance of review scores ratings. We had noticed in our EDA that there are only a few poorly rated Airbnbs. This makes it is easier for our model to predict higher review scores ratings regardless of what it may actually be since there are many more highly rated Airbnbs. Though my access to data is limited, it might be a good idea to implement both of these on a new dataset!
+We noticed earlier that our model was unable to predict values of Airbnbs that were rated poorly. Further exploration could be done into the reasoning behind it since resolving this issue might account for a higher rsq. One possible solution involves adding review counts to the data to see whether our models would perform differently. Some of the properties we looked at had poor sample sizes since a singular review is a poor indicator of the total review scores rating. Another change to consider would be implementing a better balance of review scores ratings. We had noticed in our EDA that there are only a few poorly rated Airbnbs. This makes it is easier for our model to predict higher review scores ratings regardless of what it may actually be since there are many more highly rated Airbnbs. Though my access to data is limited, it might be a good idea to implement both of these on a new dataset!
 
-In the end, our model provided use with some useful knowledge about cleaning data and building models, and we can walk away happily with some useful predictions and a small glimpse into the world of Airbnb rentals and customer satisfaction.
+In the end, our model provided us with some useful knowledge about cleaning data and building models, and we can walk away happily with some useful predictions and a small glimpse into the world of Airbnb rentals and customer satisfaction.
 
 <br>
 
-<center>
-
-![](images/how-to-get-5star-reviews-on-airbnb.png){width="571"}
-
-</center>
+<center>![](images/how-to-get-5star-reviews-on-airbnb.png){width="571"}</center>
