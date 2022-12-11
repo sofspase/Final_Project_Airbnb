@@ -1028,7 +1028,7 @@ Our estimate went down a little bit to 95.1. That is yet again a difference of a
 
 #### Airbnb Four
 
-Finally let's take a look at an Airbnb that is not included in our dataset. Here we're going to take a look at a [Tiny home](https://www.airbnb.com/rooms/46530486?adults=1&category_tag=Tag%3A8186&location=Mexico%20City%2C%20Mexico&search_mode=flex_destinations_search&check_in=2022-12-15&federated_search_id=4c196d79-7c58-4bdf-a4ca-cf36cfd2f533&source_impression_id=p3_1670390956_g5Dukvbh4JccibF5&guests=1&modal=PHOTO_TOUR_SCROLLABLE) located in Mexico City priced at a mere \$23 with a total rating of 4.82 stars or 96.4 in our metrics. Let's see how our model will rate this Airbnb:
+Finally let's take a look at an Airbnb that is not included in our dataset. Here we're going to take a look at a [Tiny home](https://www.airbnb.com/rooms/46530486?adults=1&category_tag=Tag%3A8186&location=Mexico%20City%2C%20Mexico&search_mode=flex_destinations_search&check_in=2022-12-15&federated_search_id=4c196d79-7c58-4bdf-a4ca-cf36cfd2f533&source_impression_id=p3_1670390956_g5Dukvbh4JccibF5&guests=1) located in Mexico City priced at a mere \$23 with a total rating of 4.82 stars or 96.4 in our metrics. Let's see how our model will rate this Airbnb:
 
 ```{r, class.source = 'fold-hide'}
 abnb_test4 <- data.frame(host_response_time = 'within an hour',
